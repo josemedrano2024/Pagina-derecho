@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprobante de Liquidación Laboral - El Salvador</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <div class="app-header no-print">
+            <h1>Comprobante de Liquidación Laboral</h1>
+            <span class="badge">El Salvador — Código de Trabajo</span>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs no-print">
+            <button class="tab-btn active" data-tab="tab-datos">1. Datos de las Partes</button>
+            <button class="tab-btn" data-tab="tab-jornadas">2. Jornadas y Días Especiales</button>
+            <button class="tab-btn" data-tab="tab-comprobante">3. Comprobante</button>
+        </div>
+
+        <!-- TAB 1: DATOS DE LAS PARTES -->
+        <div id="tab-datos" class="tab-content active">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="trabajador">Nombre de la persona trabajadora</label>
+                    <input type="text" id="trabajador" value=""
+                        placeholder="Nombre completo">
+                </div>
+                <div class="form-group">
+                    <label for="patrono">Nombre del patrono</label>
+                    <input type="text" id="patrono" value="" placeholder="Empresa o patrono">
+                </div>
+                <div class="form-group">
+                    <label for="salarioMensual">Salario mensual (USD)</label>
+                    <input type="number" id="salarioMensual" value="4000" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="fechaIngreso">Fecha de ingreso</label>
+                    <input type="date" id="fechaIngreso" value="2006-01-01">
+                    <small id="avisoFechaIngreso" class="aviso-fecha" style="display:none;"></small>
+                </div>
+                <div class="form-group">
+                    <label for="fechaTerminacion">Fecha de terminación</label>
+                    <input type="date" id="fechaTerminacion" value="2026-08-12">
+                    <small id="avisoFechaTerminacion" class="aviso-fecha" style="display:none;"></small>
+                </div>
+                <div class="form-group">
+                    <label for="causa">Causa de terminación</label>
+                    <select id="causa">
+                        <option value="despido" selected>Despido injustificado</option>
+                        <option value="renuncia">Renuncia voluntaria</option>
+                    </select>
+                </div>
+                <!-- Apartado de Notificación al Patrono (solo para Renuncia Voluntaria) -->
+                <div class="form-group" id="grupoNotificacion" style="display: none;">
+                    <label for="notificacionPatrono">¿Ha notificado al patrono?</label>
+                    <select id="notificacionPatrono">
+                        <option value="si">Sí, he notificado al patrono</option>
+                        <option value="no">No he notificado al patrono</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="grupoFechaNotificacion" style="display: none;">
+                    <label for="fechaNotificacion">Fecha de notificación</label>
+                    <input type="date" id="fechaNotificacion">
+                    <small id="avisoFechaNotificacion" class="aviso-fecha" style="display:none;"></small>
+                </div>
+
+                <div id="advertenciaNotificacion" class="advertencia-renuncia" style="display: none;">
+                    <strong>Advertencia:</strong> La renuncia voluntaria sin preaviso al patrono puede afectar su
+                    derecho a la prestación económica establecida en la Ley Reguladora de la Prestación Económica por
+                    Renuncia Voluntaria. Se recomienda notificar por escrito con la anticipación requerida (30 días para
+                    cargos de dirección, 15 días para los demás).
+                </div>
+            </div>
+            <div class="nota-ayuda">
+                <strong>Nota:</strong> La antigüedad se calculará automáticamente a partir de las fechas ingresadas.
+            </div>
+        </div>
+
+        <!-- TAB 2: JORNADAS Y DÍAS ESPECIALES -->
+        <div id="tab-jornadas" class="tab-content">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="horasExtraDiurnas">Horas extras diurnas</label>
+                    <input type="number" id="horasExtraDiurnas" value="10" min="0" step="0.5">
+                </div>
+                <div class="form-group">
+                    <label for="horasExtraNocturnas">Horas extras nocturnas</label>
+                    <input type="number" id="horasExtraNocturnas" value="5" min="0" step="0.5">
+                </div>
+                <div class="form-group">
+                    <label for="diasAsueto">Días de asueto laborados</label>
+                    <input type="text" id="diasAsueto" placeholder="Seleccione los días de asueto..." readonly>
+                    <small id="avisoAsueto" class="aviso-fecha" style="display:none;"></small>
+                    <div id="listaAsuetos" class="lista-asuetos"></div>
+                </div>
+                <div class="form-group">
+                    <label for="diasDescanso">Días de descanso semanal laborados</label>
+                    <input type="text" id="diasDescanso" placeholder="Seleccione los días de descanso..." readonly>
+                    <small id="avisoDescanso" class="aviso-fecha" style="display:none;"></small>
+                    <div id="listaDescansos" class="lista-descansos"></div>
+                </div>
+            </div>
+            <button class="btn-primary" id="btnCalcular">Calcular y Generar Comprobante</button>
+        </div>
+
+        <!-- TAB 3: COMPROBANTE -->
+        <div id="tab-comprobante" class="tab-content">
+            <div class="comprobante" id="comprobante">
+                <div class="comprobante-header">
+                    <h2>COMPROBANTE DE LIQUIDACIÓN</h2>
+                    <span class="fecha" id="fechaEmision"></span>
+                </div>
+
+                <!-- I. DATOS DE LAS PARTES -->
+                <div class="seccion">
+                    <h3><span class="num">I</span> Datos de las partes</h3>
+                    <div class="info-grid" id="infoPartes"></div>
+                </div>
+
+                <!-- II. DESGLOSE DE PRESTACIONES -->
+                <div class="seccion">
+                    <h3><span class="num">II</span> Desglose de prestaciones liquidadas</h3>
+                    <table id="tablaDesglose">
+                        <thead>
+                            <tr>
+                                <th>Concepto</th>
+                                <th>Base legal</th>
+                                <th class="monto-col">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoDesglose"></tbody>
+                        <tfoot id="pieDesglose"></tfoot>
+                    </table>
+                </div>
+
+                <!-- III. DEDUCCIONES -->
+                <div class="seccion">
+                    <h3><span class="num">III</span> Deducciones de ley y neto a pagar</h3>
+                    <p id="remuneracionGravada" class="texto-gravado"></p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Deducción</th>
+                                <th>Base legal</th>
+                                <th class="monto-col">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoDeducciones"></tbody>
+                    </table>
+                    <div class="neto-box">
+                        <div>
+                            <div class="label">MONTO NETO A PAGAR</div>
+                            <div class="neto-letras" id="netoLetras"></div>
+                        </div>
+                        <div class="monto-neto" id="montoNeto">$0.00</div>
+                    </div>
+                </div>
+
+                <!-- IV. DECLARACIÓN -->
+                <div class="seccion">
+                    <h3><span class="num">IV</span> Declaración</h3>
+                    <p class="texto-declaracion" id="textoDeclaracion"></p>
+                </div>
+
+                <!-- FIRMAS -->
+                <div class="firmas">
+                    <div class="firma">
+                        <div class="linea">Persona trabajadora</div>
+                        <div class="nombre" id="firmaTrabajador"></div>
+                    </div>
+                    <div class="firma">
+                        <div class="linea">Patrono o representante legal</div>
+                        <div class="nombre" id="firmaPatrono"></div>
+                    </div>
+                </div>
+
+                <!-- ADVERTENCIA LEGAL -->
+                <div class="advertencia">
+                    <strong>Advertencia legal:</strong> Este documento es un comprobante informativo del cálculo de
+                    prestaciones y <strong>NO constituye el finiquito laboral</strong>. Conforme al Art. 402 inciso 2
+                    del Código de Trabajo, la renuncia, la terminación por mutuo consentimiento o el recibo de pago de
+                    prestaciones por despido sin causa legal solo tienen valor probatorio si constan en hojas extendidas
+                    por la Dirección General de Inspección de Trabajo o por los jueces con competencia en materia
+                    laboral, utilizadas dentro de los diez días siguientes a su expedición, o bien en documento privado
+                    autenticado ante notario. Se recomienda asesoría legal profesional antes de suscribir cualquier
+                    finiquito.
+                </div>
+            </div>
+
+            <!-- ACCIONES -->
+            <div class="acciones no-print">
+                <button class="btn-secundario" id="btnImprimir">Imprimir / Guardar PDF</button>
+                <button class="btn-secundario" id="btnVolver">← Volver a editar datos</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

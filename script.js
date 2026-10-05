@@ -181,7 +181,7 @@ document.getElementById('btnNext3').addEventListener('click', function() {
         const mes = f.getMonth() + 1;
         const dia = f.getDate();
         if (anio === 2026 && mes === 10 && dia >= 1 && dia <= 30) {
-            document.getElementById('avisoAguinaldo').textContent = '⚠️ La fecha de terminación está entre el 1 y el 30 de octubre de 2026. El aguinaldo debe ser PROPORCIONAL.';
+            document.getElementById('avisoAguinaldo').textContent = 'La fecha de terminación está entre el 1 y el 30 de octubre de 2026. El aguinaldo debe ser PROPORCIONAL.';
         } else {
             document.getElementById('avisoAguinaldo').textContent = '';
         }
@@ -542,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderizarListaAsuetos(estado.diasAsueto);
             const aviso = document.getElementById('avisoAsueto');
             aviso.textContent = estado.diasAsueto.length > 0 
-                ? `✅ ${estado.diasAsueto.length} día(s) de asueto seleccionado(s).` 
+                ? `${estado.diasAsueto.length} día(s) de asueto seleccionado(s).` 
                 : '';
         }
     });

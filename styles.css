@@ -458,7 +458,7 @@ table .legal {
     .no-print,
     .app-header,
     .acciones,
-    .step:not(#step-7) {
+    .step:not(#step-8) {
         display: none !important;
     }
 
@@ -476,7 +476,7 @@ table .legal {
         padding: 0 !important;
     }
 
-    #step-7 {
+    #step-8 {
         display: block !important;
     }
 
@@ -535,10 +535,6 @@ table .legal {
         size: letter portrait;
         margin: 0.4cm 0.5cm;
     }
-}
-
-#step-8 {
-    display: block !important;
 }
 
 /* AJUSTES NUEVOS */

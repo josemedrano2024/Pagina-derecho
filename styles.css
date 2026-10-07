@@ -536,3 +536,21 @@ table .legal {
         margin: 0.4cm 0.5cm;
     }
 }
+
+#step-8 {
+    display: block !important;
+}
+
+/* AJUSTES NUEVOS */
+.aviso-azul:empty {
+    display: none;
+}
+
+.radio-group label.deshabilitado {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.radio-group label.deshabilitado:hover {
+    background: #f1f5f9;
+}

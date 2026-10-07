@@ -7,15 +7,28 @@ const TOPE_RENUNCIA = SALARIO_MINIMO_REF * 2;
 const TASA_ISSS = 0.03;
 const TASA_AFP = 0.0725;
 
+// Vacaciones: 15 días + 30%; alojamiento y alimentación suman 25% cada uno (15 x 1.25)
+const DIAS_VACACION = 15;
+const RECARGO_VACACION = 0.30;
+const RECARGO_ESPECIE = 0.25;
+
+// Día de descanso laborado: salario diario + 50% de recargo
+const RECARGO_DESCANSO = 0.50;
+
+// Aguinaldo: el período inicia el 12 de diciembre; "Completo" se bloquea antes del 1 de octubre
+const AGUINALDO_INICIO_PERIODO = { mes: 11, dia: 12 };  // mes base 0 (11 = diciembre)
+const AGUINALDO_BLOQUEO = { mes: 9, dia: 1 };           // mes base 0 (9 = octubre)
+
 // ============================================================
 // UTILIDADES
 // ============================================================
 function redondear2(num) { return Math.round((num + Number.EPSILON) * 100) / 100; }
 function formatearMoneda(valor) { return '$' + redondear2(valor).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function parseFecha(fechaStr) { return new Date(fechaStr + 'T00:00:00'); }
+function diasEntre(a, b) { return Math.round((b - a) / 86400000); }
 function formatearFecha(fechaStr) {
     if (!fechaStr) return '';
-    const fecha = new Date(fechaStr + 'T00:00:00');
-    return fecha.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    return parseFecha(fechaStr).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 function formatearFechaISO(fecha) {
     const y = fecha.getFullYear();
@@ -23,6 +36,8 @@ function formatearFechaISO(fecha) {
     const d = String(fecha.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
+function valorCampo(id) { return document.getElementById(id).value; }
+
 function numeroALetras(num) {
     const unidades = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
     const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
@@ -69,7 +84,7 @@ function calcularSemanaSanta(anio) {
 }
 
 function esAsuetoNacional(fechaStr) {
-    const fecha = new Date(fechaStr + 'T00:00:00');
+    const fecha = parseFecha(fechaStr);
     const mesDia = String(fecha.getMonth() + 1).padStart(2, '0') + '-' + String(fecha.getDate()).padStart(2, '0');
     if (ASUETOS_NACIONALES.includes(mesDia)) return true;
     if (ASUETOS_SAN_SALVADOR.includes(mesDia)) return true;
@@ -86,7 +101,13 @@ let estado = {
     tipoDespido: 'injustificado',
     notificacion: 'si',
     tipoAguinaldo: 'proporcional',
+    aguinaldoPagado: 'no',
+    gozoVacaciones: 'si',
     fechaUltimasVacaciones: '',
+    alojamiento: 'no',
+    alimentacion: 'no',
+    laboroDescanso: 'no',
+    diasDescanso: [],
     laboroAsueto: 'no',
     diasAsueto: [],
     tieneExtras: 'no',
@@ -103,18 +124,33 @@ function irAPaso(n) {
     const paso = document.getElementById('step-' + n);
     if (paso) paso.classList.add('active');
     estado.paso = n;
+    if (n === 3) actualizarPasoAguinaldo();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Utilidad: enlaza un grupo de radios con una clave del estado
+function enlazarRadios(nombre, clave, alCambiar) {
+    document.querySelectorAll(`input[name="${nombre}"]`).forEach(radio => {
+        radio.addEventListener('change', function() {
+            estado[clave] = this.value;
+            if (alCambiar) alCambiar(this.value);
+        });
+    });
+}
+
+function mostrar(id, visible) {
+    document.getElementById(id).style.display = visible ? 'block' : 'none';
 }
 
 // ============================================================
 // PASO 1 → 2
 // ============================================================
 document.getElementById('btnNext1').addEventListener('click', function() {
-    const trabajador = document.getElementById('trabajador').value.trim();
-    const patrono = document.getElementById('patrono').value.trim();
-    const salario = parseFloat(document.getElementById('salarioMensual').value);
-    const ingreso = document.getElementById('fechaIngreso').value;
-    const terminacion = document.getElementById('fechaTerminacion').value;
+    const trabajador = valorCampo('trabajador').trim();
+    const patrono = valorCampo('patrono').trim();
+    const salario = parseFloat(valorCampo('salarioMensual'));
+    const ingreso = valorCampo('fechaIngreso');
+    const terminacion = valorCampo('fechaTerminacion');
 
     if (!trabajador || !patrono || !salario || salario <= 0 || !ingreso || !terminacion) {
         alert('Por favor complete todos los campos correctamente.');
@@ -130,84 +166,120 @@ document.getElementById('btnNext1').addEventListener('click', function() {
 // ============================================================
 // PASO 2: CAUSA
 // ============================================================
-document.querySelectorAll('input[name="causa"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        estado.causa = this.value;
-        const grupoDespido = document.getElementById('grupoTipoDespido');
-        const grupoNotif = document.getElementById('grupoNotificacion');
-        if (this.value === 'despido') {
-            grupoDespido.style.display = 'block';
-            grupoNotif.style.display = 'none';
-        } else {
-            grupoDespido.style.display = 'none';
-            grupoNotif.style.display = 'block';
-        }
-    });
+enlazarRadios('causa', 'causa', function(valor) {
+    mostrar('grupoTipoDespido', valor === 'despido');
+    mostrar('grupoNotificacion', valor !== 'despido');
 });
-
-document.querySelectorAll('input[name="tipoDespido"]').forEach(radio => {
-    radio.addEventListener('change', function() { estado.tipoDespido = this.value; });
-});
-
-document.querySelectorAll('input[name="notificacion"]').forEach(radio => {
-    radio.addEventListener('change', function() { estado.notificacion = this.value; });
-});
+enlazarRadios('tipoDespido', 'tipoDespido');
+enlazarRadios('notificacion', 'notificacion');
 
 document.getElementById('btnNext2').addEventListener('click', function() {
-    if (estado.causa === 'despido') {
-        if (estado.tipoDespido === 'justificado') {
-            alert('Según el diagrama, solo se calcula liquidación para despido INJUSTIFICADO.');
-            return;
-        }
+    if (estado.causa === 'despido' && estado.tipoDespido === 'justificado') {
+        alert('Según el diagrama, solo se calcula liquidación para despido INJUSTIFICADO.');
+        return;
     }
     irAPaso(3);
 });
 
 // ============================================================
-// PASO 3: AGUINALDO
+// PASO 3: AGUINALDO (con bloqueo de "Completo")
 // ============================================================
-document.querySelectorAll('input[name="tipoAguinaldo"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        estado.tipoAguinaldo = this.value;
-    });
-});
+function aguinaldoCompletoBloqueado(fechaTermStr) {
+    if (!fechaTermStr) return false;
+    const t = parseFecha(fechaTermStr);
+    const fechaBloqueo = new Date(t.getFullYear(), AGUINALDO_BLOQUEO.mes, AGUINALDO_BLOQUEO.dia);
+    return t < fechaBloqueo;
+}
+
+function actualizarPasoAguinaldo() {
+    const fechaTerm = valorCampo('fechaTerminacion');
+    const radioCompleto = document.getElementById('radioAguinaldoCompleto');
+    const labelCompleto = document.getElementById('labelAguinaldoCompleto');
+    const aviso = document.getElementById('avisoAguinaldo');
+
+    if (aguinaldoCompletoBloqueado(fechaTerm)) {
+        radioCompleto.disabled = true;
+        labelCompleto.classList.add('deshabilitado');
+        if (estado.tipoAguinaldo === 'completo') {
+            estado.tipoAguinaldo = 'proporcional';
+            document.querySelector('input[name="tipoAguinaldo"][value="proporcional"]').checked = true;
+        }
+        aviso.textContent = 'La terminación es anterior al 1 de octubre: el aguinaldo completo está bloqueado. Solo procede el aguinaldo proporcional.';
+    } else {
+        radioCompleto.disabled = false;
+        labelCompleto.classList.remove('deshabilitado');
+        aviso.textContent = fechaTerm
+            ? 'Desde el 1 de octubre se permite el aguinaldo completo, siempre que el aguinaldo de este año no se haya pagado.'
+            : '';
+    }
+    mostrar('grupoAguinaldoPagado', estado.tipoAguinaldo === 'completo');
+}
+
+enlazarRadios('tipoAguinaldo', 'tipoAguinaldo', actualizarPasoAguinaldo);
+enlazarRadios('aguinaldoPagado', 'aguinaldoPagado');
+document.getElementById('fechaTerminacion').addEventListener('change', actualizarPasoAguinaldo);
 
 document.getElementById('btnNext3').addEventListener('click', function() {
-    // Verificar si la fecha de terminación cae entre 1 y 30 de octubre de 2026
-    const fechaTerm = document.getElementById('fechaTerminacion').value;
-    if (fechaTerm) {
-        const f = new Date(fechaTerm + 'T00:00:00');
-        const anio = f.getFullYear();
-        const mes = f.getMonth() + 1;
-        const dia = f.getDate();
-        if (anio === 2026 && mes === 10 && dia >= 1 && dia <= 30) {
-            document.getElementById('avisoAguinaldo').textContent = 'La fecha de terminación está entre el 1 y el 30 de octubre de 2026. El aguinaldo debe ser PROPORCIONAL.';
-        } else {
-            document.getElementById('avisoAguinaldo').textContent = '';
-        }
-    }
     irAPaso(4);
 });
 
 // ============================================================
-// PASO 4: VACACIONES (CALENDARIO)
+// LISTA DE FECHAS (etiquetas con X) — reutilizable
 // ============================================================
-let fpVacaciones;
-document.addEventListener('DOMContentLoaded', function() {
-    const hoy = new Date();
-    const maxFecha = formatearFechaISO(hoy);
-    fpVacaciones = flatpickr('#fechaUltimasVacaciones', {
-        dateFormat: 'Y-m-d',
-        locale: 'es',
-        maxDate: maxFecha,
-        onChange: function(selectedDates, dateStr) {
-            estado.fechaUltimasVacaciones = dateStr;
-        }
+const calendarios = {};
+
+function renderizarLista(contenedorId, calendarioClave, estadoClave) {
+    const contenedor = document.getElementById(contenedorId);
+    contenedor.innerHTML = '';
+    estado[estadoClave].sort().forEach(fecha => {
+        const tag = document.createElement('span');
+        tag.className = 'tag-dia';
+        tag.innerHTML = `${formatearFecha(fecha)} <span class="cerrar" data-fecha="${fecha}">&times;</span>`;
+        tag.querySelector('.cerrar').addEventListener('click', function() {
+            const f = this.getAttribute('data-fecha');
+            const idx = estado[estadoClave].indexOf(f);
+            if (idx > -1) estado[estadoClave].splice(idx, 1);
+            calendarios[calendarioClave].setDate(estado[estadoClave], false);
+            renderizarLista(contenedorId, calendarioClave, estadoClave);
+            actualizarAvisoLista(calendarioClave, estadoClave);
+        });
+        contenedor.appendChild(tag);
     });
+}
+
+function actualizarAvisoLista(calendarioClave, estadoClave) {
+    const n = estado[estadoClave].length;
+    const idAviso = calendarioClave === 'descanso' ? 'avisoDescanso' : 'avisoAsueto';
+    const etiqueta = calendarioClave === 'descanso' ? 'día(s) de descanso' : 'día(s) de asueto';
+    document.getElementById(idAviso).textContent = n > 0 ? `${n} ${etiqueta} seleccionado(s).` : '';
+}
+
+// Los calendarios solo permiten fechas entre el ingreso y la terminación
+function aplicarLimites(instancia) {
+    instancia.set('minDate', valorCampo('fechaIngreso') || null);
+    instancia.set('maxDate', valorCampo('fechaTerminacion') || null);
+}
+
+// ============================================================
+// PASO 4: VACACIONES (Sí/No, calendario, alojamiento y comida)
+// ============================================================
+enlazarRadios('gozoVacaciones', 'gozoVacaciones', function(valor) {
+    mostrar('grupoFechaVacaciones', valor === 'si');
+    actualizarAvisoVacaciones();
 });
+enlazarRadios('alojamiento', 'alojamiento', actualizarAvisoVacaciones);
+enlazarRadios('alimentacion', 'alimentacion', actualizarAvisoVacaciones);
+
+function actualizarAvisoVacaciones() {
+    const partes = [];
+    if (estado.gozoVacaciones === 'no') partes.push('Sin vacaciones previas: se calcula desde el último aniversario de ingreso.');
+    if (estado.alojamiento === 'si') partes.push('Alojamiento: +25% sobre 15 días (15 × 1.25).');
+    if (estado.alimentacion === 'si') partes.push('Alimentación: +25% sobre 15 días (15 × 1.25).');
+    document.getElementById('avisoVacaciones').textContent = partes.join(' ');
+}
 
 document.getElementById('btnNext4').addEventListener('click', function() {
-    if (!estado.fechaUltimasVacaciones) {
+    if (estado.gozoVacaciones === 'si' && !estado.fechaUltimasVacaciones) {
         alert('Por favor seleccione la fecha de sus últimas vacaciones.');
         return;
     }
@@ -215,93 +287,57 @@ document.getElementById('btnNext4').addEventListener('click', function() {
 });
 
 // ============================================================
-// PASO 5: DÍAS DE ASUETO
+// PASO 5: DÍAS DE DESCANSO (calendario manual, no pagados)
 // ============================================================
-document.querySelectorAll('input[name="laboroAsueto"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        estado.laboroAsueto = this.value;
-        const grupo = document.getElementById('grupoCalendarioAsueto');
-        if (this.value === 'si') {
-            grupo.style.display = 'block';
-        } else {
-            grupo.style.display = 'none';
-        }
-    });
+enlazarRadios('laboroDescanso', 'laboroDescanso', function(valor) {
+    mostrar('grupoCalendarioDescanso', valor === 'si');
+    if (valor === 'no') {
+        estado.diasDescanso = [];
+        if (calendarios.descanso) calendarios.descanso.clear(false);
+        renderizarLista('listaDescansos', 'descanso', 'diasDescanso');
+        actualizarAvisoLista('descanso', 'diasDescanso');
+    }
 });
-
-let fpAsueto;
-document.addEventListener('DOMContentLoaded', function() {
-    const hoy = new Date();
-    const maxFecha = formatearFechaISO(hoy);
-    fpAsueto = flatpickr('#diasAsueto', {
-        mode: 'multiple',
-        dateFormat: 'Y-m-d',
-        locale: 'es',
-        maxDate: maxFecha,
-        disable: [
-            function(date) {
-                const fechaStr = formatearFechaISO(date);
-                return !esAsuetoNacional(fechaStr);
-            }
-        ],
-        onChange: function(selectedDates) {
-            estado.diasAsueto = selectedDates.map(d => formatearFechaISO(d));
-            renderizarListaAsuetos(estado.diasAsueto);
-            const aviso = document.getElementById('avisoAsueto');
-            if (estado.diasAsueto.length > 0) {
-                aviso.textContent = `✅ ${estado.diasAsueto.length} día(s) de asueto seleccionado(s).`;
-            } else {
-                aviso.textContent = '';
-            }
-        }
-    });
-});
-
-function renderizarListaAsuetos(fechas) {
-    const contenedor = document.getElementById('listaAsuetos');
-    contenedor.innerHTML = '';
-    fechas.sort().forEach(fecha => {
-        const tag = document.createElement('span');
-        tag.className = 'tag-dia';
-        tag.innerHTML = `${formatearFecha(fecha)} <span class="cerrar" data-fecha="${fecha}">&times;</span>`;
-        tag.querySelector('.cerrar').addEventListener('click', function() {
-            const f = this.getAttribute('data-fecha');
-            const idx = estado.diasAsueto.indexOf(f);
-            if (idx > -1) estado.diasAsueto.splice(idx, 1);
-            fpAsueto.setDate(estado.diasAsueto);
-            renderizarListaAsuetos(estado.diasAsueto);
-        });
-        contenedor.appendChild(tag);
-    });
-}
 
 document.getElementById('btnNext5').addEventListener('click', function() {
+    if (estado.laboroDescanso === 'si' && estado.diasDescanso.length === 0) {
+        alert('Seleccione al menos un día de descanso laborado, o marque "No".');
+        return;
+    }
     irAPaso(6);
 });
 
 // ============================================================
-// PASO 6: HORAS EXTRAS
+// PASO 6: DÍAS DE ASUETO
 // ============================================================
-document.querySelectorAll('input[name="tieneExtras"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        estado.tieneExtras = this.value;
-        const grupo = document.getElementById('grupoExtras');
-        if (this.value === 'si') {
-            grupo.style.display = 'block';
-        } else {
-            grupo.style.display = 'none';
-        }
-    });
+enlazarRadios('laboroAsueto', 'laboroAsueto', function(valor) {
+    mostrar('grupoCalendarioAsueto', valor === 'si');
+    if (valor === 'no') {
+        estado.diasAsueto = [];
+        if (calendarios.asueto) calendarios.asueto.clear(false);
+        renderizarLista('listaAsuetos', 'asueto', 'diasAsueto');
+        actualizarAvisoLista('asueto', 'diasAsueto');
+    }
+});
+
+document.getElementById('btnNext6').addEventListener('click', function() {
+    irAPaso(7);
+});
+
+// ============================================================
+// PASO 7: HORAS EXTRAS
+// ============================================================
+enlazarRadios('tieneExtras', 'tieneExtras', function(valor) {
+    mostrar('grupoExtras', valor === 'si');
 });
 
 // ============================================================
 // CÁLCULO FINAL
 // ============================================================
 document.getElementById('btnCalcularFinal').addEventListener('click', function() {
-    // Leer valores del paso 6
-    estado.fechaExtras = document.getElementById('fechaExtras').value;
-    estado.horaInicioExtras = document.getElementById('horaInicioExtras').value;
-    estado.horaFinExtras = document.getElementById('horaFinExtras').value;
+    estado.fechaExtras = valorCampo('fechaExtras');
+    estado.horaInicioExtras = valorCampo('horaInicioExtras');
+    estado.horaFinExtras = valorCampo('horaFinExtras');
 
     if (estado.tieneExtras === 'si') {
         if (!estado.fechaExtras || !estado.horaInicioExtras || !estado.horaFinExtras) {
@@ -313,7 +349,7 @@ document.getElementById('btnCalcularFinal').addEventListener('click', function()
     const datos = calcularTodo();
     if (datos) {
         renderizarComprobante(datos);
-        irAPaso(7);
+        irAPaso(8);
     }
 });
 
@@ -321,49 +357,65 @@ document.getElementById('btnCalcularFinal').addEventListener('click', function()
 // LÓGICA DE CÁLCULO COMPLETA
 // ============================================================
 function calcularTodo() {
-    const trabajador = document.getElementById('trabajador').value || 'N/A';
-    const patrono = document.getElementById('patrono').value || 'N/A';
-    const salarioMensual = parseFloat(document.getElementById('salarioMensual').value) || 0;
-    const fechaIngresoStr = document.getElementById('fechaIngreso').value;
-    const fechaTerminacionStr = document.getElementById('fechaTerminacion').value;
+    const trabajador = valorCampo('trabajador') || 'N/A';
+    const patrono = valorCampo('patrono') || 'N/A';
+    const salarioMensual = parseFloat(valorCampo('salarioMensual')) || 0;
+    const fechaIngresoStr = valorCampo('fechaIngreso');
+    const fechaTerminacionStr = valorCampo('fechaTerminacion');
+
+    const ingreso = parseFecha(fechaIngresoStr);
+    const terminacion = parseFecha(fechaTerminacionStr);
 
     let anios = 0, meses = 0;
-    if (fechaIngresoStr && fechaTerminacionStr) {
-        const ingreso = new Date(fechaIngresoStr + 'T00:00:00');
-        const terminacion = new Date(fechaTerminacionStr + 'T00:00:00');
-        let diffAnios = terminacion.getFullYear() - ingreso.getFullYear();
-        let diffMeses = terminacion.getMonth() - ingreso.getMonth();
-        if (diffMeses < 0 || (diffMeses === 0 && terminacion.getDate() < ingreso.getDate())) {
-            diffAnios--; diffMeses += 12;
-        }
-        anios = diffAnios; meses = diffMeses;
+    let diffAnios = terminacion.getFullYear() - ingreso.getFullYear();
+    let diffMeses = terminacion.getMonth() - ingreso.getMonth();
+    if (diffMeses < 0 || (diffMeses === 0 && terminacion.getDate() < ingreso.getDate())) {
+        diffAnios--; diffMeses += 12;
     }
+    anios = diffAnios; meses = diffMeses;
 
     const SBD = salarioMensual / 30;
 
-    // --- VACACIONES ---
-    let vacacionProporcional = 0;
-    if (estado.fechaUltimasVacaciones) {
-        const ultimas = new Date(estado.fechaUltimasVacaciones + 'T00:00:00');
-        const term = new Date(fechaTerminacionStr + 'T00:00:00');
-        const diffMeses = (term.getFullYear() - ultimas.getFullYear()) * 12 + (term.getMonth() - ultimas.getMonth());
-        const vacacionCompleta = SBD * 15 * 1.3;
-        vacacionProporcional = (vacacionCompleta * Math.min(diffMeses, 12)) / 12;
+    // --- VACACIONES (15 días + 30%, más 25% por alojamiento y/o alimentación) ---
+    let inicioVac;
+    if (estado.gozoVacaciones === 'si' && estado.fechaUltimasVacaciones) {
+        inicioVac = parseFecha(estado.fechaUltimasVacaciones);
+    } else {
+        // Sin vacaciones previas: desde el último aniversario de ingreso
+        inicioVac = new Date(terminacion.getFullYear(), ingreso.getMonth(), ingreso.getDate());
+        if (inicioVac > terminacion) inicioVac.setFullYear(inicioVac.getFullYear() - 1);
+        if (inicioVac < ingreso) inicioVac = ingreso;
     }
+    const fraccionVac = Math.min(Math.max(diasEntre(inicioVac, terminacion), 0) / 365, 1);
+    const baseVac = SBD * DIAS_VACACION;
+
+    const vacacionProporcional = baseVac * (1 + RECARGO_VACACION) * fraccionVac;
+    const vacacionAlojamiento = estado.alojamiento === 'si' ? baseVac * RECARGO_ESPECIE * fraccionVac : 0;
+    const vacacionAlimentacion = estado.alimentacion === 'si' ? baseVac * RECARGO_ESPECIE * fraccionVac : 0;
 
     // --- AGUINALDO ---
-    let diasAguinaldo;
     const antiguedadTotal = anios + (meses / 12);
+    let diasAguinaldo;
     if (antiguedadTotal < 3) diasAguinaldo = 15;
-    else if (antiguedadTotal <= 10) diasAguinaldo = 19;
+    else if (antiguedadTotal < 10) diasAguinaldo = 19;
     else diasAguinaldo = 21;
 
+    // Seguridad: si "Completo" está bloqueado por fecha, se usa proporcional
+    let tipoAguinaldo = estado.tipoAguinaldo;
+    if (tipoAguinaldo === 'completo' && aguinaldoCompletoBloqueado(fechaTerminacionStr)) tipoAguinaldo = 'proporcional';
+
     let aguinaldoProporcional = 0;
-    if (estado.tipoAguinaldo === 'proporcional') {
-        const aguinaldoCompleto = SBD * diasAguinaldo;
-        aguinaldoProporcional = (aguinaldoCompleto / 360) * (meses * 30);
+    if (tipoAguinaldo === 'completo') {
+        aguinaldoProporcional = estado.aguinaldoPagado === 'si' ? 0 : SBD * diasAguinaldo;
     } else {
-        aguinaldoProporcional = SBD * diasAguinaldo;
+        // Proporcional desde el 12 de diciembre (o desde el ingreso, si fue posterior)
+        const limiteAnio = new Date(terminacion.getFullYear(), AGUINALDO_INICIO_PERIODO.mes, AGUINALDO_INICIO_PERIODO.dia);
+        let inicioAg = terminacion >= limiteAnio
+            ? limiteAnio
+            : new Date(terminacion.getFullYear() - 1, AGUINALDO_INICIO_PERIODO.mes, AGUINALDO_INICIO_PERIODO.dia);
+        if (ingreso > inicioAg) inicioAg = ingreso;
+        const diasPeriodo = Math.min(diasEntre(inicioAg, terminacion) + 1, 365);
+        aguinaldoProporcional = (SBD * diasAguinaldo * diasPeriodo) / 365;
     }
 
     // --- INDEMNIZACIÓN O RENUNCIA ---
@@ -393,14 +445,12 @@ function calcularTodo() {
         const minutosTotales = (hFin * 60 + mFin) - (hIni * 60 + mIni);
         const horas = Math.max(0, minutosTotales / 60);
 
-        // Determinar si es diurna o nocturna (7pm - 6am)
         const horaInicioDecimal = hIni + mIni / 60;
         const esNocturna = horaInicioDecimal >= 19 || horaInicioDecimal < 6;
 
         const salarioHoraDiurna = SBD / 8;
         if (esNocturna) {
-            const salarioHoraNocturna = salarioHoraDiurna * 1.25;
-            subtotalExtraNocturnas = horas * salarioHoraNocturna * 2;
+            subtotalExtraNocturnas = horas * salarioHoraDiurna * 1.25 * 2;
         } else {
             subtotalExtraDiurnas = horas * salarioHoraDiurna * 2;
         }
@@ -409,15 +459,16 @@ function calcularTodo() {
     // --- DÍAS DE ASUETO ---
     const montoAsueto = estado.diasAsueto.length * SBD * 2;
 
-    // --- DÍAS DE DESCANSO ---
-    // Según el diagrama, no se pregunta por descanso, pero se puede dejar en 0
-    const montoDescanso = 0;
+    // --- DÍAS DE DESCANSO LABORADOS (no pagados): salario diario + 50% ---
+    const montoDescanso = estado.diasDescanso.length * SBD * (1 + RECARGO_DESCANSO);
 
     // --- TOTALES ---
-    const totalDevengado = vacacionProporcional + aguinaldoProporcional + indemnizacion +
+    const totalDevengado = vacacionProporcional + vacacionAlojamiento + vacacionAlimentacion +
+                           aguinaldoProporcional + indemnizacion +
                            subtotalExtraDiurnas + subtotalExtraNocturnas + montoAsueto + montoDescanso;
 
-    const remuneracionGravada = vacacionProporcional + subtotalExtraDiurnas + subtotalExtraNocturnas + montoAsueto;
+    const remuneracionGravada = vacacionProporcional + vacacionAlojamiento + vacacionAlimentacion +
+                                subtotalExtraDiurnas + subtotalExtraNocturnas + montoAsueto + montoDescanso;
     const montoExento = indemnizacion + aguinaldoProporcional;
 
     const isss = Math.min(remuneracionGravada * TASA_ISSS, 30.00);
@@ -439,7 +490,9 @@ function calcularTodo() {
         anios, meses,
         causa: estado.causa,
         notificacion: estado.notificacion,
-        vacacionProporcional, aguinaldoProporcional, indemnizacion,
+        diasDescansoCant: estado.diasDescanso.length,
+        vacacionProporcional, vacacionAlojamiento, vacacionAlimentacion,
+        aguinaldoProporcional, indemnizacion,
         subtotalExtraDiurnas, subtotalExtraNocturnas, montoAsueto, montoDescanso,
         totalDevengado, remuneracionGravada, montoExento,
         isss, afp, isr, totalDeducciones, montoNeto
@@ -466,9 +519,12 @@ function renderizarComprobante(datos) {
     `;
 
     const conceptos = [
-        { n: 'Vacación proporcional', l: 'Arts. 177 y 187 CT', m: datos.vacacionProporcional },
-        { n: 'Aguinaldo proporcional', l: 'Arts. 196-198 CT', m: datos.aguinaldoProporcional },
+        { n: 'Vacación proporcional (15 días + 30%)', l: 'Arts. 177 y 187 CT', m: datos.vacacionProporcional },
+        { n: 'Adicional 25% por alojamiento (vacación)', l: 'Art. 187 CT', m: datos.vacacionAlojamiento },
+        { n: 'Adicional 25% por alimentación (vacación)', l: 'Art. 187 CT', m: datos.vacacionAlimentacion },
+        { n: 'Aguinaldo', l: 'Arts. 196-198 CT', m: datos.aguinaldoProporcional },
         { n: datos.causa === 'despido' ? 'Indemnización por despido injustificado' : 'Compensación económica por renuncia', l: datos.causa === 'despido' ? 'Art. 58 CT' : 'Ley de Renuncia Voluntaria', m: datos.indemnizacion },
+        { n: `Días de descanso laborados no pagados (${datos.diasDescansoCant})`, l: 'Art. 175 CT', m: datos.montoDescanso },
         { n: 'Horas extras diurnas', l: 'Art. 169 CT', m: datos.subtotalExtraDiurnas },
         { n: 'Horas extras nocturnas', l: 'Arts. 168 y 169 CT', m: datos.subtotalExtraNocturnas },
         { n: 'Días de asueto laborados', l: 'Art. 192 CT', m: datos.montoAsueto }
@@ -519,31 +575,42 @@ function renderizarComprobante(datos) {
 }
 
 // ============================================================
-// EVENTOS FINALES
+// INICIALIZACIÓN (una sola vez)
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnImprimir').addEventListener('click', () => window.print());
     document.getElementById('btnReiniciar').addEventListener('click', () => location.reload());
 
-    // Inicializar calendarios de flatpickr
-    const hoy = new Date();
-    const maxFecha = formatearFechaISO(hoy);
-
-    flatpickr('#fechaUltimasVacaciones', {
-        dateFormat: 'Y-m-d', locale: 'es', maxDate: maxFecha,
-        onChange: (d, s) => { estado.fechaUltimasVacaciones = s; }
+    // Vacaciones: última fecha de vacaciones
+    calendarios.vacaciones = flatpickr('#fechaUltimasVacaciones', {
+        dateFormat: 'Y-m-d', locale: 'es',
+        onOpen: (d, s, inst) => aplicarLimites(inst),
+        onChange: (d, dateStr) => { estado.fechaUltimasVacaciones = dateStr; }
     });
 
-    flatpickr('#diasAsueto', {
-        mode: 'multiple', dateFormat: 'Y-m-d', locale: 'es', maxDate: maxFecha,
-        disable: [date => !esAsuetoNacional(formatearFechaISO(date))],
+    // Días de descanso: calendario manual, cualquier fecha del período laborado
+    calendarios.descanso = flatpickr('#diasDescanso', {
+        mode: 'multiple', dateFormat: 'Y-m-d', locale: 'es',
+        onOpen: (d, s, inst) => aplicarLimites(inst),
         onChange: (selectedDates) => {
-            estado.diasAsueto = selectedDates.map(d => formatearFechaISO(d));
-            renderizarListaAsuetos(estado.diasAsueto);
-            const aviso = document.getElementById('avisoAsueto');
-            aviso.textContent = estado.diasAsueto.length > 0 
-                ? `${estado.diasAsueto.length} día(s) de asueto seleccionado(s).` 
-                : '';
+            estado.diasDescanso = selectedDates.map(d => formatearFechaISO(d));
+            renderizarLista('listaDescansos', 'descanso', 'diasDescanso');
+            actualizarAvisoLista('descanso', 'diasDescanso');
         }
     });
+
+    // Días de asueto: solo fechas de asueto
+    calendarios.asueto = flatpickr('#diasAsueto', {
+        mode: 'multiple', dateFormat: 'Y-m-d', locale: 'es',
+        disable: [date => !esAsuetoNacional(formatearFechaISO(date))],
+        onOpen: (d, s, inst) => aplicarLimites(inst),
+        onChange: (selectedDates) => {
+            estado.diasAsueto = selectedDates.map(d => formatearFechaISO(d));
+            renderizarLista('listaAsuetos', 'asueto', 'diasAsueto');
+            actualizarAvisoLista('asueto', 'diasAsueto');
+        }
+    });
+
+    actualizarAvisoVacaciones();
+    actualizarPasoAguinaldo();
 });

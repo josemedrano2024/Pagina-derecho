@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,193 +8,252 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
-<div class="app-container">
-    <div class="app-header">
-        <h1>Calculadora de Liquidación Laboral</h1>
-        <span class="badge">El Salvador — Código de Trabajo</span>
-    </div>
-
-    <!-- CONTENEDOR DE PASOS -->
-    <div class="step-container">
-        <!-- PASO 1: DATOS BÁSICOS -->
-        <div class="step active" id="step-1">
-            <h2 class="step-title">Paso 1: Datos Básicos</h2>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="trabajador">Nombre del trabajador</label>
-                    <input type="text" id="trabajador" value="">
-                </div>
-                <div class="form-group">
-                    <label for="patrono">Nombre del patrono</label>
-                    <input type="text" id="patrono" value="">
-                </div>
-                <div class="form-group">
-                    <label for="salarioMensual">Salario mensual (USD)</label>
-                    <input type="number" id="salarioMensual" value="" min="0" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label for="fechaIngreso">Fecha de ingreso</label>
-                    <input type="date" id="fechaIngreso" value="2006-01-01">
-                </div>
-                <div class="form-group">
-                    <label for="fechaTerminacion">Fecha de terminación</label>
-                    <input type="date" id="fechaTerminacion" value="2026-10-05">
-                </div>
-            </div>
-            <button class="btn-next" id="btnNext1">Siguiente →</button>
+    <div class="app-container">
+        <div class="app-header">
+            <h1>Calculadora de Liquidación Laboral</h1>
+            <span class="badge">El Salvador — Código de Trabajo</span>
         </div>
 
-        <!-- PASO 2: CAUSA DE TERMINACIÓN -->
-        <div class="step" id="step-2">
-            <h2 class="step-title">Paso 2: Causa de Terminación</h2>
-            <div class="form-group">
-                <label>¿Cuál es la causa de terminación?</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="causa" value="despido" checked> Despido</label>
-                    <label><input type="radio" name="causa" value="renuncia"> Renuncia Voluntaria</label>
-                </div>
-            </div>
-            <div class="form-group" id="grupoTipoDespido" style="display: none;">
-                <label>¿El despido es justificado o injustificado?</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="tipoDespido" value="injustificado" checked> Injustificado</label>
-                    <label><input type="radio" name="tipoDespido" value="justificado"> Justificado</label>
-                </div>
-            </div>
-            <div class="form-group" id="grupoNotificacion" style="display: none;">
-                <label>¿Informó al patrono sobre su renuncia?</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="notificacion" value="si" checked> Sí</label>
-                    <label><input type="radio" name="notificacion" value="no"> No</label>
-                </div>
-            </div>
-            <button class="btn-next" id="btnNext2">Siguiente →</button>
-        </div>
-
-        <!-- PASO 3: AGUINALDO -->
-        <div class="step" id="step-3">
-            <h2 class="step-title">Paso 3: Aguinaldo</h2>
-            <div class="form-group">
-                <label>¿El aguinaldo es proporcional o completo?</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="tipoAguinaldo" value="proporcional" checked> Proporcional</label>
-                    <label><input type="radio" name="tipoAguinaldo" value="completo"> Completo</label>
-                </div>
-                <small class="aviso-azul" id="avisoAguinaldo"></small>
-            </div>
-            <button class="btn-next" id="btnNext3">Siguiente →</button>
-        </div>
-
-        <!-- PASO 4: VACACIONES -->
-        <div class="step" id="step-4">
-            <h2 class="step-title">Paso 4: Vacaciones</h2>
-            <div class="form-group">
-                <label>¿Cuándo fueron sus últimas vacaciones?</label>
-                <input type="text" id="fechaUltimasVacaciones" placeholder="Seleccione la fecha..." readonly>
-                <small class="aviso-azul" id="avisoVacaciones"></small>
-            </div>
-            <button class="btn-next" id="btnNext4">Siguiente →</button>
-        </div>
-
-        <!-- PASO 5: DÍAS DE ASUETO -->
-        <div class="step" id="step-5">
-            <h2 class="step-title">Paso 5: Días de Asueto</h2>
-            <div class="form-group">
-                <label>¿Laboró en días de asueto?</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="laboroAsueto" value="si"> Sí</label>
-                    <label><input type="radio" name="laboroAsueto" value="no" checked> No</label>
-                </div>
-            </div>
-            <div class="form-group" id="grupoCalendarioAsueto" style="display: none;">
-                <label>Seleccione los días de asueto laborados:</label>
-                <input type="text" id="diasAsueto" placeholder="Seleccione días..." readonly>
-                <div id="listaAsuetos" class="lista-dias"></div>
-                <small class="aviso-azul" id="avisoAsueto"></small>
-            </div>
-            <button class="btn-next" id="btnNext5">Siguiente →</button>
-        </div>
-
-        <!-- PASO 6: HORAS EXTRAS NO PAGADAS -->
-        <div class="step" id="step-6">
-            <h2 class="step-title">Paso 6: Horas Extras No Pagadas</h2>
-            <div class="form-group">
-                <label>¿Tiene horas extras no pagadas?</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="tieneExtras" value="si"> Sí</label>
-                    <label><input type="radio" name="tieneExtras" value="no" checked> No</label>
-                </div>
-            </div>
-            <div class="form-group" id="grupoExtras" style="display: none;">
-                <label>Fecha de las horas extras:</label>
-                <input type="date" id="fechaExtras">
-                <label>Hora de inicio:</label>
-                <input type="time" id="horaInicioExtras" value="08:00">
-                <label>Hora de fin:</label>
-                <input type="time" id="horaFinExtras" value="10:00">
-                <small class="aviso-azul" id="avisoExtras"></small>
-            </div>
-            <button class="btn-next" id="btnCalcularFinal">Calcular Liquidación →</button>
-        </div>
-
-        <!-- PASO 7: COMPROBANTE -->
-        <div class="step" id="step-7">
-            <div class="comprobante" id="comprobante">
-                <div class="comprobante-header">
-                    <h2>COMPROBANTE DE LIQUIDACIÓN</h2>
-                    <span class="fecha" id="fechaEmision"></span>
-                </div>
-                <div class="seccion">
-                    <h3><span class="num">I</span> Datos de las partes</h3>
-                    <div class="info-grid" id="infoPartes"></div>
-                </div>
-                <div class="seccion">
-                    <h3><span class="num">II</span> Desglose de prestaciones liquidadas</h3>
-                    <table id="tablaDesglose">
-                        <thead><tr><th>Concepto</th><th>Base legal</th><th class="monto-col">Monto</th></tr></thead>
-                        <tbody id="cuerpoDesglose"></tbody>
-                        <tfoot id="pieDesglose"></tfoot>
-                    </table>
-                </div>
-                <div class="seccion">
-                    <h3><span class="num">III</span> Deducciones de ley y neto a pagar</h3>
-                    <p id="remuneracionGravada" class="texto-gravado"></p>
-                    <table>
-                        <thead><tr><th>Deducción</th><th>Base legal</th><th class="monto-col">Monto</th></tr></thead>
-                        <tbody id="cuerpoDeducciones"></tbody>
-                    </table>
-                    <div class="neto-box">
-                        <div>
-                            <div class="label">MONTO NETO A PAGAR</div>
-                            <div class="neto-letras" id="netoLetras"></div>
-                        </div>
-                        <div class="monto-neto" id="montoNeto">$0.00</div>
+        <!-- CONTENEDOR DE PASOS -->
+        <div class="step-container">
+            <!-- PASO 1: DATOS BÁSICOS -->
+            <div class="step active" id="step-1">
+                <h2 class="step-title">Paso 1: Datos Básicos</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="trabajador">Nombre del trabajador</label>
+                        <input type="text" id="trabajador" value="">
+                    </div>
+                    <div class="form-group">
+                        <label for="patrono">Nombre del patrono</label>
+                        <input type="text" id="patrono" value="">
+                    </div>
+                    <div class="form-group">
+                        <label for="salarioMensual">Salario mensual (USD)</label>
+                        <input type="number" id="salarioMensual" value="" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="fechaIngreso">Fecha de ingreso</label>
+                        <input type="date" id="fechaIngreso" value="2006-01-01">
+                    </div>
+                    <div class="form-group">
+                        <label for="fechaTerminacion">Fecha de terminación</label>
+                        <input type="date" id="fechaTerminacion" value="2026-10-05">
                     </div>
                 </div>
-                <div class="seccion">
-                    <h3><span class="num">IV</span> Declaración</h3>
-                    <p class="texto-declaracion" id="textoDeclaracion"></p>
-                </div>
-                <div class="firmas">
-                    <div class="firma"><div class="linea">Persona trabajadora</div><div class="nombre" id="firmaTrabajador"></div></div>
-                    <div class="firma"><div class="linea">Patrono o representante legal</div><div class="nombre" id="firmaPatrono"></div></div>
-                </div>
-                <div class="advertencia">
-                    <strong>Advertencia legal:</strong> Este documento es un comprobante informativo del cálculo de prestaciones y <strong>NO constituye el finiquito laboral</strong>. Conforme al Art. 402 inciso 2 del Código de Trabajo, la renuncia, la terminación por mutuo consentimiento o el recibo de pago de prestaciones por despido sin causa legal solo tienen valor probatorio si constan en hojas extendidas por la Dirección General de Inspección de Trabajo o por los jueces con competencia en materia laboral, utilizadas dentro de los diez días siguientes a su expedición, o bien en documento privado autenticado ante notario. Se recomienda asesoría legal profesional antes de suscribir cualquier finiquito.
-                </div>
+                <button class="btn-next" id="btnNext1">Siguiente →</button>
             </div>
-            <div class="acciones">
-                <button class="btn-secondary" id="btnImprimir">Imprimir / Guardar PDF</button>
-                <button class="btn-secondary" id="btnReiniciar">← Reiniciar</button>
+
+            <!-- PASO 2: CAUSA DE TERMINACIÓN -->
+            <div class="step" id="step-2">
+                <h2 class="step-title">Paso 2: Causa de Terminación</h2>
+                <div class="form-group">
+                    <label>¿Cuál es la causa de terminación?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="causa" value="despido" checked> Despido</label>
+                        <label><input type="radio" name="causa" value="renuncia"> Renuncia Voluntaria</label>
+                    </div>
+                </div>
+                <div class="form-group" id="grupoTipoDespido" style="display: block;">
+                    <label>¿El despido es justificado o injustificado?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="tipoDespido" value="injustificado" checked>
+                            Injustificado</label>
+                        <label><input type="radio" name="tipoDespido" value="justificado"> Justificado</label>
+                    </div>
+                </div>
+                <div class="form-group" id="grupoNotificacion" style="display: none;">
+                    <label>¿Informó al patrono sobre su renuncia?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="notificacion" value="si" checked> Sí</label>
+                        <label><input type="radio" name="notificacion" value="no"> No</label>
+                    </div>
+                </div>
+                <button class="btn-next" id="btnNext2">Siguiente →</button>
+            </div>
+
+            <!-- PASO 3: AGUINALDO -->
+            <div class="step" id="step-3">
+                <h2 class="step-title">Paso 3: Aguinaldo</h2>
+                <div class="form-group">
+                    <label>¿El aguinaldo es proporcional o completo?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="tipoAguinaldo" value="proporcional" checked>
+                            Proporcional</label>
+                        <label id="labelAguinaldoCompleto"><input type="radio" name="tipoAguinaldo" value="completo"
+                                id="radioAguinaldoCompleto"> Completo</label>
+                    </div>
+                    <small class="aviso-azul" id="avisoAguinaldo"></small>
+                </div>
+                <div class="form-group" id="grupoAguinaldoPagado" style="display: none;">
+                    <label>¿Ya se le pagó el aguinaldo de este año?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="aguinaldoPagado" value="no" checked> No, no se ha
+                            pagado</label>
+                        <label><input type="radio" name="aguinaldoPagado" value="si"> Sí, ya se pagó</label>
+                    </div>
+                </div>
+                <button class="btn-next" id="btnNext3">Siguiente →</button>
+            </div>
+
+            <!-- PASO 4: VACACIONES -->
+            <div class="step" id="step-4">
+                <h2 class="step-title">Paso 4: Vacaciones</h2>
+                <div class="form-group">
+                    <label>¿Ha gozado de vacaciones anteriormente?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="gozoVacaciones" value="si" checked> Sí</label>
+                        <label><input type="radio" name="gozoVacaciones" value="no"> No</label>
+                    </div>
+                </div>
+                <div class="form-group" id="grupoFechaVacaciones">
+                    <label>¿Cuándo fueron sus últimas vacaciones?</label>
+                    <input type="text" id="fechaUltimasVacaciones" placeholder="Seleccione la fecha..." readonly>
+                </div>
+                <div class="form-group">
+                    <label>¿Recibía alojamiento del patrono?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="alojamiento" value="si"> Sí</label>
+                        <label><input type="radio" name="alojamiento" value="no" checked> No</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>¿Recibía alimentación (comida) del patrono?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="alimentacion" value="si"> Sí</label>
+                        <label><input type="radio" name="alimentacion" value="no" checked> No</label>
+                    </div>
+                </div>
+                <small class="aviso-azul" id="avisoVacaciones"></small>
+                <button class="btn-next" id="btnNext4">Siguiente →</button>
+            </div>
+
+            <!-- PASO 5: DÍAS DE DESCANSO -->
+            <div class="step" id="step-5">
+                <h2 class="step-title">Paso 5: Días de Descanso</h2>
+                <div class="form-group">
+                    <label>¿Laboró en días de descanso (no pagados)?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="laboroDescanso" value="si"> Sí</label>
+                        <label><input type="radio" name="laboroDescanso" value="no" checked> No</label>
+                    </div>
+                </div>
+                <div class="form-group" id="grupoCalendarioDescanso" style="display: none;">
+                    <label>Seleccione manualmente las fechas laboradas en descanso:</label>
+                    <input type="text" id="diasDescanso" placeholder="Seleccione días..." readonly>
+                    <div id="listaDescansos" class="lista-dias"></div>
+                    <small class="aviso-azul" id="avisoDescanso"></small>
+                </div>
+                <button class="btn-next" id="btnNext5">Siguiente →</button>
+            </div>
+
+            <!-- PASO 6: HORAS EXTRAS NO PAGADAS -->
+            <div class="step" id="step-6">
+                <h2 class="step-title">Paso 6: Horas Extras No Pagadas</h2>
+                <div class="form-group">
+                    <label>¿Tiene horas extras no pagadas?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="tieneExtras" value="si"> Sí</label>
+                        <label><input type="radio" name="tieneExtras" value="no" checked> No</label>
+                    </div>
+                </div>
+                <div class="form-group" id="grupoExtras" style="display: none;">
+                    <label>Fecha de las horas extras:</label>
+                    <input type="date" id="fechaExtras">
+                    <label>Hora de inicio:</label>
+                    <input type="time" id="horaInicioExtras" value="08:00">
+                    <label>Hora de fin:</label>
+                    <input type="time" id="horaFinExtras" value="10:00">
+                    <small class="aviso-azul" id="avisoExtras"></small>
+                </div>
+                <button class="btn-next" id="btnCalcularFinal">Calcular Liquidación →</button>
+            </div>
+
+            <!-- PASO 7: COMPROBANTE -->
+            <div class="step" id="step-7">
+                <div class="comprobante" id="comprobante">
+                    <div class="comprobante-header">
+                        <h2>COMPROBANTE DE LIQUIDACIÓN</h2>
+                        <span class="fecha" id="fechaEmision"></span>
+                    </div>
+                    <div class="seccion">
+                        <h3><span class="num">I</span> Datos de las partes</h3>
+                        <div class="info-grid" id="infoPartes"></div>
+                    </div>
+                    <div class="seccion">
+                        <h3><span class="num">II</span> Desglose de prestaciones liquidadas</h3>
+                        <table id="tablaDesglose">
+                            <thead>
+                                <tr>
+                                    <th>Concepto</th>
+                                    <th>Base legal</th>
+                                    <th class="monto-col">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoDesglose"></tbody>
+                            <tfoot id="pieDesglose"></tfoot>
+                        </table>
+                    </div>
+                    <div class="seccion">
+                        <h3><span class="num">III</span> Deducciones de ley y neto a pagar</h3>
+                        <p id="remuneracionGravada" class="texto-gravado"></p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Deducción</th>
+                                    <th>Base legal</th>
+                                    <th class="monto-col">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoDeducciones"></tbody>
+                        </table>
+                        <div class="neto-box">
+                            <div>
+                                <div class="label">MONTO NETO A PAGAR</div>
+                                <div class="neto-letras" id="netoLetras"></div>
+                            </div>
+                            <div class="monto-neto" id="montoNeto">$0.00</div>
+                        </div>
+                    </div>
+                    <div class="seccion">
+                        <h3><span class="num">IV</span> Declaración</h3>
+                        <p class="texto-declaracion" id="textoDeclaracion"></p>
+                    </div>
+                    <div class="firmas">
+                        <div class="firma">
+                            <div class="linea">Persona trabajadora</div>
+                            <div class="nombre" id="firmaTrabajador"></div>
+                        </div>
+                        <div class="firma">
+                            <div class="linea">Patrono o representante legal</div>
+                            <div class="nombre" id="firmaPatrono"></div>
+                        </div>
+                    </div>
+                    <div class="advertencia">
+                        <strong>Advertencia legal:</strong> Este documento es un comprobante informativo del cálculo de
+                        prestaciones y <strong>NO constituye el finiquito laboral</strong>. Conforme al Art. 402 inciso
+                        2 del Código de Trabajo, la renuncia, la terminación por mutuo consentimiento o el recibo de
+                        pago de prestaciones por despido sin causa legal solo tienen valor probatorio si constan en
+                        hojas extendidas por la Dirección General de Inspección de Trabajo o por los jueces con
+                        competencia en materia laboral, utilizadas dentro de los diez días siguientes a su expedición, o
+                        bien en documento privado autenticado ante notario. Se recomienda asesoría legal profesional
+                        antes de suscribir cualquier finiquito.
+                    </div>
+                </div>
+                <div class="acciones">
+                    <button class="btn-secondary" id="btnImprimir">Imprimir / Guardar PDF</button>
+                    <button class="btn-secondary" id="btnReiniciar">← Reiniciar</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
-<script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <script src="script.js"></script>
 </body>
+
 </html>
